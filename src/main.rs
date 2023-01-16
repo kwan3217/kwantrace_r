@@ -110,10 +110,8 @@ fn main()->std::io::Result<()> {
     }
     let mut file=File::create("out.ppm")?;
     write!(file,"P5 {n_cols} {n_rows} 255\n")?;
-    for i_row in 0..n_rows {
-        for i_col in 0..n_cols {
-            file.write(&[img[i_row][i_col]])?;
-        }
+    for row in img.iter() {
+        file.write(row)?;
     }
     Ok(())
 }
