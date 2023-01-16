@@ -2,17 +2,50 @@
 
 use std::fs::File;
 use std::io::Write;
-// Linear algebra stuff from
-// https://rust-lang-nursery.github.io/rust-cookbook/science/mathematics/linear_algebra.html
-use ndarray::{array,Array,Array1,ArrayView1};
-// Vectors are 1D and functions like dot know how to treat them as rows or columns -- IE
-// you do M@v (where v is a compatible column vector) as M.dot(v),
-//    and v@M (where v is a compatible row    vector) as v.dot(M)
-//    and v.u (where both vectors are just vectors, don't care row or column) as v.dot(u)
+
+struct Position {
+    x:f64,
+    y:f64,
+    z:f64,
+}
+
+struct Direction {
+    x:f64,
+    y:f64,
+    z:f64,
+}
+
+trait Vector {
+    fn _x(&self)->f64;
+    fn _y(&self)->f64;
+    fn _z(&self)->f64;
+    fn dot(&self,other:&impl Vector)->f64 {
+        self._x()*other._x()+
+        self._y()*other._y()+
+        self._z()*other._z()
+    }
+}
+
+impl Vector for Position {
+    fn _x(&self)->f64 {self.x}
+    fn _y(&self)->f64 {self.y}
+    fn _z(&self)->f64 {self.z}
+}
+
+impl Vector for Direction {
+    fn _x(&self)->f64 {self.x}
+    fn _y(&self)->f64 {self.y}
+    fn _z(&self)->f64 {self.z}
+}
+
+struct Ray {
+    r0:Position,
+    v:Direction,
+}
 
 /// Intersect a ray and the unit sphere
 ///
-pub fn ray_sphere(r0:ArrayView1<f64>,v:ArrayView1<f64>)->Option<f64> {
+fn ray_sphere(rv:&Ray)->Option<f64> {
     /* The sphere is defined by x^2+y^2+z^2=1, and the
      ray is defined by x=x0+vx*t, y=y0+vy*t, z=z0+zy*t
 
@@ -27,9 +60,9 @@ pub fn ray_sphere(r0:ArrayView1<f64>,v:ArrayView1<f64>)->Option<f64> {
      b=2*(x0*vx+y0*vy+z0*vz)=2*(r0.v)
      c=(x0^2+y0^2+z0^2-1)=r0.r0-1
     */
-    let a=v.dot(&v);
-    let b=2.0*r0.dot(&v);
-    let c=r0.dot(&r0)-1.0;
+    let a=rv.v.dot(&rv.v);
+    let b=2.0*rv.r0.dot(&rv.v);
+    let c=rv.r0.dot(&rv.r0)-1.0;
     let d=b*b-4.0*a*c;
     if d<0.0 {
         None
@@ -57,27 +90,29 @@ pub fn ray_sphere(r0:ArrayView1<f64>,v:ArrayView1<f64>)->Option<f64> {
 
 
 fn main()->std::io::Result<()> {
-    const n_rows:usize=120;
-    const n_cols:usize=160;
-    let mut img=Array::<u8,_>::zeros((n_rows,n_cols));
-    let v =array![ 0.0, 0.0, 1.0];
-    for i_row in 0..n_rows {
-        for i_col in 0..n_cols {
-            let r0=array![ ((i_col as f64)/(n_cols as f64)-0.5)*4.0, ((i_row as f64)/(n_rows as f64)-0.5)*3.0,-2.0];
-            match ray_sphere(r0.view(),v.view()) {
+    const n_cols:usize=1920;
+    const n_rows:usize=1080;
+    let mut img=[[0;n_cols];n_rows];
+    let mut rv=Ray{r0:Position{x:0.0,y:0.0,z:0.0},v:Direction{x:0.0,y:0.0,z:1.0}};
+    for (i_row,row) in img.iter_mut().enumerate() {
+        for (i_col,pix) in row.iter_mut().enumerate() {
+            rv.r0.x=((i_col as f64)/(n_cols as f64)-0.5)*16.0/4.0;
+            rv.r0.y=((i_row as f64)/(n_rows as f64)-0.5)* 9.0/4.0;
+            rv.r0.z=-2.0;
+            match ray_sphere(&rv) {
                 Some(t) => {
-                    println!("{i_row},{i_col} Intersect: t={t}");
-                    img[[i_row,i_col]]=(t*128.0) as u8;
+                    *pix=(t * 128.0) as u8;
                 },
-                None    => println!("No intersect")
+                None    => ()
             }
         }
+        print!(".");
     }
     let mut file=File::create("out.ppm")?;
     write!(file,"P5 {n_cols} {n_rows} 255\n")?;
     for i_row in 0..n_rows {
         for i_col in 0..n_cols {
-            file.write(&[img[[i_row, i_col]]])?;
+            file.write(&[img[i_row][i_col]])?;
         }
     }
     Ok(())
