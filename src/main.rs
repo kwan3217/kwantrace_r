@@ -1,24 +1,41 @@
-//! Find the intersection between a ray and a sphere
+#![warn(missing_docs)]
+//! Implementation of a ray-tracer in Rust
 
 use std::fs::File;
 use std::io::Write;
 
+/// Position vector, a 3-element vector which participates in translation.
+///
+///When thinking about the vector as a homogeneous vector, all
+///vectors of this type are considered to have an implicit w=1 component.
+///This is handled in the matrix multiplication of a position vector.
 struct Position {
     x:f64,
     y:f64,
     z:f64,
 }
 
+/// Direction vector, a 3-element vector which does not participate in translation.
+///
+///When thinking about the vector as a homogeneous vector, all
+///vectors of this type are considered to have an implicit w=1 component.
+///This is handled in the matrix multiplication of a position vector.
 struct Direction {
     x:f64,
     y:f64,
     z:f64,
 }
 
+///Operations which are common to both Position and Direction, and operations
+///between them.
 trait Vector {
+    /// Accessor for x component of a vector, since traits can't require fields,
+    /// and therefore we can't require
     fn _x(&self)->f64;
     fn _y(&self)->f64;
     fn _z(&self)->f64;
+    /// Dot product between two vectors. This ignores the implied w component
+    /// of either vector
     fn dot(&self,other:&impl Vector)->f64 {
         self._x()*other._x()+
         self._y()*other._y()+
@@ -45,21 +62,16 @@ struct Ray {
 
 /// Intersect a ray and the unit sphere
 ///
+/// The sphere is defined by x^2+y^2+z^2=1, and the
+/// ray is defined by x=x0+vx*t, y=y0+vy*t, z=z0+zy*t
+///
+///  * (x0+vx*t)^2+(y0+vy*t)^2+(z0+vz*t)^2-1=0
+///  * x0^2+2*x0*vx*t+vx^2*t^2 + y0^2+2*y0*vy*t+vy^2*t^2 + z0^2+2*z0*vz*t+vz^2*t^2 - 1 =0
+///  * t^2(vx^2+vy^2+vz^2)+ t  (2*x0*vx+2*y0*vy+2*z0*vz)+    (x0^2+y0^2+z0^2-1)=0
+///  * a=vx^2+vy^2+vz^2=v.v
+///  * b=2*(x0*vx+y0*vy+z0*vz)=2*(r0.v)
+///  * c=(x0^2+y0^2+z0^2-1)=r0.r0-1
 fn ray_sphere(rv:&Ray)->Option<f64> {
-    /* The sphere is defined by x^2+y^2+z^2=1, and the
-     ray is defined by x=x0+vx*t, y=y0+vy*t, z=z0+zy*t
-
-     (x0+vx*t)^2+(y0+vy*t)^2+(z0+vz*t)^2-1=0
-     x0^2+2*x0*vx*t+vx^2*t^2 +
-     y0^2+2*y0*vy*t+vy^2*t^2 +
-     z0^2+2*z0*vz*t+vz^2*t^2 - 1 =0
-     t^2(vx^2+vy^2+vz^2)+
-     t  (2*x0*vx+2*y0*vy+2*z0*vz)+
-        (x0^2+y0^2+z0^2-1)=0
-     a=vx^2+vy^2+vz^2=v.v
-     b=2*(x0*vx+y0*vy+z0*vz)=2*(r0.v)
-     c=(x0^2+y0^2+z0^2-1)=r0.r0-1
-    */
     let a=rv.v.dot(&rv.v);
     let b=2.0*rv.r0.dot(&rv.v);
     let c=rv.r0.dot(&rv.r0)-1.0;
