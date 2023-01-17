@@ -168,3 +168,8 @@ pub(crate) trait Vector {
         self._z()*other._z()
     }
 }
+
+pub struct Ray {
+    pub(crate) r0:Position,
+    pub(crate) v:Direction,
+}
