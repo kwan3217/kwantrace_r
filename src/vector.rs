@@ -75,6 +75,7 @@ impl Matrix3x3 {
                     e[m][p] += self.e[m][n] * rhs.e[n][p];
                 }
             }
+        }
         Matrix3x3 { e: e }
 
          */
