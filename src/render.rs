@@ -1,14 +1,42 @@
-use crate::vector::{Ray, Vector};
+use crate::vector::{Direction, HMatrix, Matrix3x3, Ray, Vector};
+use crate::transform::{Transform, TransformList, Translate};
 
-pub(crate) trait Render {
-    fn intersectLocal(&self, rv:&Ray)->Option<f64>;
+pub trait Render {
+    fn intersect_local(&self, rv_b:&Ray) ->Option<f64>;
+    fn M_rb(&self)->&HMatrix;
+    fn M_br(&self)->&HMatrix;
+    fn translate(&mut self,x:f64,y:f64,z:f64) {
+        let T=Translate::make(x,y,z);
+        self.get_transforms().push(Box::new(T));
+    }
+    fn intersect(&self, rv_r:&Ray)->Option<f64> {
+        self.intersect_local(&self.M_br().mul_ray(rv_r))
+    }
+    fn get_transforms(&mut self)->&mut TransformList;
+    fn set_M_rb(&mut self,M_rb:HMatrix);
+    fn set_M_br(&mut self,M_br:HMatrix);
+    fn prepare_render(&mut self) {
+        let M_rb=self.get_transforms().get_matrix();
+        let M_br=M_rb.inv();
+        self.set_M_rb(M_rb);
+        self.set_M_br(M_br);
+    }
 }
 
 pub struct Sphere {
+    _m_rb:HMatrix,
+    _m_br:HMatrix,
+    _transforms:TransformList,
+}
 
+impl Sphere {
+    pub fn make()->Sphere {
+        Sphere{_m_rb:HMatrix::identity(), _m_br: HMatrix::identity(), _transforms: vec![] }
+    }
 }
 
 impl Render for Sphere {
+
     /// Intersect a ray and the unit sphere
     ///
     /// The sphere is defined by x^2+y^2+z^2=1, and the
@@ -20,7 +48,7 @@ impl Render for Sphere {
     ///  * a=vx^2+vy^2+vz^2=v.v
     ///  * b=2*(x0*vx+y0*vy+z0*vz)=2*(r0.v)
     ///  * c=(x0^2+y0^2+z0^2-1)=r0.r0-1
-    fn intersectLocal(&self, rv: &Ray) -> Option<f64> {
+    fn intersect_local(&self, rv: &Ray) -> Option<f64> {
         let a=rv.v.dot(&rv.v);
         let b=2.0*rv.r0.dot(&rv.v);
         let c=rv.r0.dot(&rv.r0)-1.0;
@@ -48,4 +76,87 @@ impl Render for Sphere {
             }
         }
     }
+
+    fn M_rb(&self) -> &HMatrix {
+        &self._m_rb
+    }
+
+    fn M_br(&self) -> &HMatrix {
+        &self._m_br
+    }
+
+    fn get_transforms(&mut self) -> &mut TransformList {
+        &mut self._transforms
+    }
+
+    fn set_M_rb(&mut self,M_rb:HMatrix) {
+        self._m_rb=M_rb;
+    }
+
+    fn set_M_br(&mut self,M_br:HMatrix) {
+        self._m_br=M_br;
+    }
+}
+
+/// A union *has* a list of child Render objects.
+pub struct Union {
+    pub itemList:Vec<Box<dyn Render>>,
+    _transforms:TransformList,
+}
+
+impl Render for Union {
+    fn get_transforms(&mut self) -> &mut TransformList {
+        &mut self._transforms
+    }
+
+    fn set_M_rb(&mut self,M_rb:HMatrix) {
+        todo!()
+    }
+
+    fn set_M_br(&mut self,M_rb:HMatrix) {
+        todo!()
+    }
+
+    fn intersect_local(&self, rv: &Ray) -> Option<f64> {
+        /// In many languages, we would keep track of the closest
+        /// valid parameter, by tracking it. The initial value
+        /// is either very large or literally infinity, so that
+        /// any valid parameter is less than it.
+        ///
+        /// Here instead we use the Option enum. We check
+        /// the first thing and keep it as a Some(t) or None. We
+        /// then iterate through the other things. If this one
+        /// is better (has an intersection while we don't yet,
+        /// or intersection is closer than current best) we keep
+        /// the best intersection. When we are done, we return
+        /// the best intersection, without having to check for
+        /// thinks like are we still pointing at infinity.
+        let mut result=self.itemList[0].intersect_local(rv);
+        for this_render in &self.itemList[1..] {
+            let this_result= this_render.intersect_local(rv);
+            match this_result {
+                Some(_) => {
+                    if result.is_none() {
+                        result=this_result;
+                    } else {
+                        if this_result<result {
+                            result=this_result;
+                        }
+                    }
+                },
+                None    => ()
+            };
+
+        }
+        result
+    }
+
+    fn M_rb(&self) -> &HMatrix {
+        todo!()
+    }
+
+    fn M_br(&self) -> &HMatrix {
+        todo!()
+    }
+
 }
