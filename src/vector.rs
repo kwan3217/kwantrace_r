@@ -142,8 +142,8 @@ impl Matrix3x3 {
 }
 
 pub struct HMatrix {
-    pub(crate) M:Matrix3x3,
-    pub(crate) T:Direction,
+    pub M:Matrix3x3,
+    pub T:Direction,
 }
 
 impl HMatrix {
@@ -154,10 +154,10 @@ impl HMatrix {
         HMatrix {M:self.M.mul(&self.M),
                  T:self.M.mul_dir(&rhs.T).add_dir(&self.T)}
     }
-    fn mul_dir(&self, rhs: &Direction) -> Direction {
+    pub fn mul_dir(&self, rhs: &Direction) -> Direction {
         self.M.mul_dir(rhs)
     }
-    fn mul_pos(&self, rhs: &Position) -> Position {
+    pub fn mul_pos(&self, rhs: &Position) -> Position {
         self.M.mul_pos(rhs).add_dir(&self.T)
     }
     fn inv(&self) -> HMatrix {
@@ -168,7 +168,7 @@ impl HMatrix {
 
 ///Operations which are common to both Position and Direction, and operations
 ///between them.
-pub(crate) trait Vector {
+pub trait Vector {
     /// Accessor for x component of a vector, since traits can't require fields,
     /// and therefore we can't require
     fn _x(&self)->f64;

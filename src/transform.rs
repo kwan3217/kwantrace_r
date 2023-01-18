@@ -1,10 +1,10 @@
 use crate::vector::{Direction, HMatrix, Matrix3x3};
 
-trait Transform {
+pub trait Transform {
     fn get_matrix(&self)->HMatrix;
 }
 
-struct Translate {
+pub struct Translate {
     T:Direction,
 }
 
