@@ -160,7 +160,10 @@ impl HMatrix {
     pub fn mul_pos(&self, rhs: &Position) -> Position {
         self.M.mul_pos(rhs).add_dir(&self.T)
     }
-    fn inv(&self) -> HMatrix {
+    pub fn mul_ray(&self, rhs: &Ray) -> Ray {
+        Ray{r0:self.mul_pos(&rhs.r0),v:self.mul_dir(&rhs.v)}
+    }
+    pub fn inv(&self) -> HMatrix {
         let Am1=self.M.inv();
         HMatrix{T:Am1.mul_neg_dir(&self.T),M:Am1}
     }
