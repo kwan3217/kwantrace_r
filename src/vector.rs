@@ -20,6 +20,12 @@ pub struct Direction {
     pub z:f64,
 }
 
+impl Direction {
+    pub(crate) fn zero() -> Direction {
+        Direction{x:0.0,y:0.0,z:0.0}
+    }
+}
+
 impl Vector for Position {
     fn _x(&self)->f64 {self.x}
     fn _y(&self)->f64 {self.y}
@@ -64,6 +70,11 @@ pub struct Matrix3x3 {
 }
 
 impl Matrix3x3 {
+    pub fn identity()->Matrix3x3{
+        Matrix3x3{e:[[1.0,0.0,0.0],
+                     [0.0,1.0,0.0],
+                     [0.0,0.0,1.0]]}
+    }
     fn mul(&self,rhs:&Matrix3x3)->Matrix3x3 {
         // looped implementation
         /*
@@ -136,7 +147,10 @@ pub struct HMatrix {
 }
 
 impl HMatrix {
-    pub(crate) fn mul(&self, rhs: &HMatrix) -> HMatrix {
+    pub fn identity() -> HMatrix {
+        HMatrix{M:Matrix3x3::identity(),T:Direction::zero()}
+    }
+    pub fn mul(&self, rhs: &HMatrix) -> HMatrix {
         HMatrix {M:self.M.mul(&self.M),
                  T:self.M.mul_dir(&rhs.T).add_dir(&self.T)}
     }
