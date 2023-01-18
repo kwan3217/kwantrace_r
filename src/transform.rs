@@ -8,6 +8,11 @@ pub struct Translate {
     T:Direction,
 }
 
+impl Translate {
+    pub(crate) fn make(x:f64, y:f64, z:f64) ->Translate {
+        Translate{T:Direction{x,y,z}}
+    }
+}
 impl Transform for Translate {
     fn get_matrix(&self) -> HMatrix {
         HMatrix{M:Matrix3x3{e:[[1.0,0.0,0.0],
@@ -94,14 +99,16 @@ impl Transform for RotateZ {
     }
 }
 
+pub type TransformList=Vec<Box<dyn Transform>>;
+
 /// Get a single transformation matrix from a vector of transforms.
 ///
 /// This is something that we can't do in C++: Add a function to an existing
 /// class, without subclassing it etc.
-impl Transform for Vec<Box<dyn Transform>> {
+impl Transform for TransformList {
     fn get_matrix(&self) -> HMatrix {
         let this_transform=&self[0];
-        let mut result =this_transform.get_matrix();
+        let mut result =HMatrix::identity();
         for subtrans in self.iter() {
             result=subtrans.get_matrix().mul(&result);
         }
