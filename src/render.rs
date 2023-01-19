@@ -85,10 +85,6 @@ impl Render for Sphere {
         &self._m_br
     }
 
-    fn get_transforms(&mut self) -> &mut TransformList {
-        &mut self._transforms
-    }
-
     fn set_M_rb(&mut self,M_rb:HMatrix) {
         self._m_rb=M_rb;
     }
@@ -96,44 +92,63 @@ impl Render for Sphere {
     fn set_M_br(&mut self,M_br:HMatrix) {
         self._m_br=M_br;
     }
-}
 
-/// A union *has* a list of child Render objects.
-pub struct Union {
-    pub itemList:Vec<Box<dyn Render>>,
-    _transforms:TransformList,
-}
-
-impl Render for Union {
     fn get_transforms(&mut self) -> &mut TransformList {
         &mut self._transforms
     }
+}
 
-    fn set_M_rb(&mut self,M_rb:HMatrix) {
-        todo!()
+pub struct Union {
+    pub itemList:Vec<Box<dyn Render>>,
+    _transforms:TransformList,
+    _m_rb:HMatrix,
+    _m_br:HMatrix,
+}
+
+impl Union {
+    pub fn make() -> Union {
+        Union{_m_rb:HMatrix::identity(), _m_br: HMatrix::identity(), _transforms: vec![],itemList:vec![] }
+    }
+}
+
+impl Render for Union {
+    fn prepare_render(&mut self) {
+        let M_rb=self.get_transforms().get_matrix();
+        let M_br=M_rb.inv();
+        self.set_M_rb(M_rb);
+        self.set_M_br(M_br);
+        for this_render in &mut self.itemList {
+            this_render.prepare_render();
+        }
     }
 
-    fn set_M_br(&mut self,M_rb:HMatrix) {
-        todo!()
-    }
+    fn intersect_local(&self, rv_b: &Ray) -> Option<f64> {
+        /* In many languages, we would keep track of the closest
+           valid parameter, by tracking it. The initial value
+            is either very large or literally infinity, so that
+            any valid parameter is less than it.
 
-    fn intersect_local(&self, rv: &Ray) -> Option<f64> {
-        /// In many languages, we would keep track of the closest
-        /// valid parameter, by tracking it. The initial value
-        /// is either very large or literally infinity, so that
-        /// any valid parameter is less than it.
-        ///
-        /// Here instead we use the Option enum. We check
-        /// the first thing and keep it as a Some(t) or None. We
-        /// then iterate through the other things. If this one
-        /// is better (has an intersection while we don't yet,
-        /// or intersection is closer than current best) we keep
-        /// the best intersection. When we are done, we return
-        /// the best intersection, without having to check for
-        /// thinks like are we still pointing at infinity.
-        let mut result=self.itemList[0].intersect_local(rv);
+            Here instead we use the Option enum. We check
+            the first thing and keep it as a Some(t) or None. We
+            then iterate through the other things. If this one
+            is better (has an intersection while we don't yet,
+            or intersection is closer than current best) we keep
+            the best intersection. When we are done, we return
+            the best intersection, without having to check for
+            thinks like are we still pointing at infinity.
+
+            Note that we are in intersect_local() for the union,
+            but are calling intersect() for the children. Each
+            child performs its own transform and therefore what
+            it considers to be M_rb is actually M_ib where i is
+            the intermediate frame (the Union body frame). This requires
+            one matrix-ray transform for the Union, and one for each
+            child. Maybe later we will concatenate the
+            reference-from-intermediate and intermediate-from-body
+            transformations in prepare_render(). */
+        let mut result=self.itemList[0].intersect(rv_b);
         for this_render in &self.itemList[1..] {
-            let this_result= this_render.intersect_local(rv);
+            let this_result= this_render.intersect(rv_b);
             match this_result {
                 Some(_) => {
                     if result.is_none() {
@@ -152,11 +167,23 @@ impl Render for Union {
     }
 
     fn M_rb(&self) -> &HMatrix {
-        todo!()
+        &self._m_rb
     }
 
     fn M_br(&self) -> &HMatrix {
-        todo!()
+        &self._m_br
+    }
+
+    fn set_M_rb(&mut self,M_rb:HMatrix) {
+        self._m_rb=M_rb;
+    }
+
+    fn set_M_br(&mut self,M_br:HMatrix) {
+        self._m_br=M_br;
+    }
+
+    fn get_transforms(&mut self) -> &mut TransformList {
+        &mut self._transforms
     }
 
 }
