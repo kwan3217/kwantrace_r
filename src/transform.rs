@@ -107,11 +107,15 @@ pub type TransformList=Vec<Box<dyn Transform>>;
 /// class, without subclassing it etc.
 impl Transform for TransformList {
     fn get_matrix(&self) -> HMatrix {
-        let this_transform=&self[0];
-        let mut result =HMatrix::identity();
-        for subtrans in self.iter() {
-            result=subtrans.get_matrix().mul(&result);
+        if self.len()==0 {
+            HMatrix::identity()
+        } else {
+            let this_transform = &self[0];
+            let mut result = this_transform.get_matrix();
+            for this_transform in &self[1..] {
+                result = this_transform.get_matrix().mul(&result);
+            }
+            result
         }
-        result
     }
 }
